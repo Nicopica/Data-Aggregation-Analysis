@@ -1,11 +1,8 @@
-version: "3"
-
 networks:
   iot_network:
     external: true
 
 services:
-  # The Master Node (Manages the cluster and hands out tasks)
   namenode:
     image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
     container_name: namenode
@@ -18,9 +15,8 @@ services:
     env_file:
       - ./hadoop.env
     volumes:
-      - ./hadoop:/app  # Maps your local hadoop folder into the container
+      - ./hadoop:/app
 
-  # The Resource Manager (Manages CPU and Memory)
   resourcemanager:
     image: bde2020/hadoop-resourcemanager:2.0.0-hadoop3.2.1-java8
     container_name: resourcemanager
@@ -29,7 +25,6 @@ services:
     env_file:
       - ./hadoop.env
 
-  # Worker Node 1 (Does the actual mapping and reducing)
   datanode1:
     image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
     container_name: datanode1
@@ -40,7 +35,6 @@ services:
     env_file:
       - ./hadoop.env
 
-  # Worker Node 2 (Helps Worker 1 do the mapping and reducing)
   nodemanager1:
     image: bde2020/hadoop-nodemanager:2.0.0-hadoop3.2.1-java8
     container_name: nodemanager1

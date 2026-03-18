@@ -1,4 +1,5 @@
 import sqlite3
+from datetime import datetime
 from flask import Flask, g, request, Response
 
 DATABASE = 'iot_data.db'
@@ -8,7 +9,6 @@ def get_db():
     db = getattr(g, '_database', None)
     if db is None:
         db = g._database = sqlite3.connect(DATABASE)
-        # CRITICAL: Enable foreign key support for cascading deletes (Grade 4 requirement)
         db.execute("PRAGMA foreign_keys = ON;")
     return db
 
@@ -27,6 +27,14 @@ def store():
     value = request.args.get('value', type=float)
     timestamp = request.args.get('timestamp', type=str)
 
+    if None in (sensor_id, lat, lon, sensor_type, value, timestamp):
+        return "Error: Missing one or more required parameters.", 400
+
+    try:
+        datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return "Error: Invalid timestamp. Format must be exactly YYYY-MM-DD HH:MM:SS", 400
+
     db = get_db()
     
     cur = db.execute("SELECT type_id FROM sensor_types WHERE name = ?", (sensor_type,))
@@ -43,7 +51,6 @@ def store():
     db.commit()
     
     return "Data stored successfully", 200
-
 @app.route('/retrieve')
 def retrieve():
     sensor_id = request.args.get('sensor_id', type=int)
@@ -97,9 +104,12 @@ def fetch():
     rows = cur.fetchall()
     
     plain_text = "\n".join([f"{row[0]}\t{row[1]}\t{row[2]}" for row in rows])
-    
-    return Response(plain_text, mimetype='text/plain')
 
+    response = Response(plain_text, mimetype='text/plain')
+    safe_filename = sensor_type.replace(" ", "_") if sensor_type else "sensor_data"
+    response.headers["Content-Disposition"] = f"attachment; filename={safe_filename}.txt"
+    return response
+    
 @app.route('/add_type')
 def add_type():
     name = request.args.get('name', type=str)
@@ -122,4 +132,3 @@ def delete_type():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
-
