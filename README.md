@@ -1,46 +1,26 @@
-clean built:
-docker-compose down
+steps on how to set it up:
 
-docker rm -f iot_server sensor_temp_1 sensor_pres_1 sensor_air_1 sensor_pres_extra hadoop_node
-docker network rm iot_network
+1. sudo bash deploy.sh
 
+The server, sensors and hadoop should be running.
 
+Links to see activated sensors (retrieve):
+    http://127.0.0.1:8080/retrieve?sensor_id=1&start_time=2020-01-01%2000:00:00&end_time=2030-12-31%2023:59:59
+    http://127.0.0.1:8080/retrieve?sensor_id=2&start_time=2020-01-01%2000:00:00&end_time=2030-12-31%2023:59:59
+    http://127.0.0.1:8080/retrieve?sensor_id=3&start_time=2020-01-01%2000:00:00&end_time=2030-12-31%2023:59:59
+    http://127.0.0.1:8080/retrieve?sensor_id=4&start_time=2020-01-01%2000:00:00&end_time=2030-12-31%2023:59:59
 
+Add data (store):
+    http://localhost:8080/store?sensor_id=1&latitude=45.0&longitude=9.0&type=Temperature%20Sensor&value=23.5&timestamp=2025-03-19%2010:00:00
 
-create & start server:
+Download .txt (fetch):
+    http://localhost:8080/fetch?type=Temperature%20Sensor
 
-docker network create iot_network
-docker run -d --network iot_network --name iot_server -p 8080:8080 iot_server_img
-
-start visual sensors:
-
-docker build -t virtual_sensor_img -f docker/Dockerfile.sensor .
-
-docker run -d --network iot_network -e SENSOR_ID=1 -e LAT=45.0 -e LON=9.0 -e TYPE="Temperature Sensor" --name sensor_temp_1 virtual_sensor_img
-
-docker run -d --network iot_network -e SENSOR_ID=2 -e LAT=45.5 -e LON=9.5 -e TYPE="Pressure Sensor" --name sensor_pres_1 virtual_sensor_img
-
-docker run -d --network iot_network -e SENSOR_ID=3 -e LAT=46.0 -e LON=10.0 -e TYPE="Air Quality Sensor" --name sensor_air_1 virtual_sensor_img
-
-
-fetch data & start hadloop:
-curl "http://127.0.0.1:8080/fetch?type=Temperature%20Sensor" > hadoop/input.txt
-
-docker build -t hadoop_streaming_img -f docker/Dockerfile.hadoop .
-
-docker run -d --network iot_network --name hadoop_node hadoop_streaming_img
-
-
-run hadoop:
-docker exec hadoop_node hadoop jar /opt/hadoop/share/hadoop/tools/lib/hadoop-streaming-3.3.6.jar \
-    -input /app/input.txt \
-    -output /app/output_data \
-    -mapper "/app/mapper.py" \
-    -reducer "/app/reducer.py" \
-    -cmdenv TARGET_X=45.0 \
-    -cmdenv TARGET_Y=9.0 \
-    -cmdenv MAX_D=100.0
-
-
-see results:
-docker exec hadoop_node cat /app/output_data/part-00000
+Types of default messurement types:
+    Temperature Sensor | Temperature%20Sensor
+    Pressure Sensor | Pressure%20Sensor
+    Air Quality Sensor | Air%20Quality%20Sensor
+    CO2 Sensor | CO2%20Sensor
+    
+2. run run_analysis.sh LATITUDE LONGITUDE DISTANCE TYPE
+    LATITUDE, LONGITUDE, DISTANCE and TYPE are adjustable parameters, the default types are listed above. If no parameter is set, some default values will be used
